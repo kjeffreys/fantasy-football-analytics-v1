@@ -88,7 +88,7 @@ fantasy-football-analytics/
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/fantasy-football-analytics.git
+git clone https://github.com/kjeffreys/fantasy-football-analytics.git
 cd fantasy-football-analytics
 ```
 
@@ -178,5 +178,5 @@ MIT License (or any other open-source or proprietary license you prefer).
 
 ## Contact
 
-- **Project Creator**: Your Name or GitHub handle  
+- **Project Creator**: kjeffreyscs
 - **Issues / Suggestions**: Please open an issue on this repo.
