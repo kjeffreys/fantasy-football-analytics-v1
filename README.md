@@ -167,6 +167,9 @@ docker compose up
 - Potentially incorporate video/image processing (OpenCV, AWS Rekognition)
 - Front-end web UI or minimal web service for public access
 - Discuss monetization and scaling strategies
+- Other AI or ML that would incorporate important learnings for anything relevant (betting props, coaches, owners, etc.)
+- End tools like app to practice drafting, apps to use for live drafts that can quickly update information and beat competition and record to learn about opponents for year over year drafts with same managers), any other useful utilites
+- Gather user feedback through X or other forums to obtain ROI information about what people want and what they would pay for through patreon, kickstarter, or other means
 
 ---
 
