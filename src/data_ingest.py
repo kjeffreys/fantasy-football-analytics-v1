@@ -1,22 +1,13 @@
-from pathlib import Path
 import argparse
 import pandas as pd
 import logging
 
-# Configure module-level logger
+logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(name)s:%(message)s")
 logger = logging.getLogger(__name__)
 
 
-def load_data(file_path: Path) -> pd.DataFrame | None:
-    """
-    Load NFL data from a CSV file into a pandas DataFrame.
-
-    Args:
-        file_path (Path): Path to the input CSV file.
-
-    Returns:
-        pd.DataFrame | None: Loaded DataFrame if successful, None if an error occurs.
-    """
+def load_data(file_path):
+    """Load NFL data from a CSV file into a pandas DataFrame."""
     try:
         df = pd.read_csv(file_path)
         logger.info(
@@ -26,76 +17,99 @@ def load_data(file_path: Path) -> pd.DataFrame | None:
     except FileNotFoundError:
         logger.error(f"File not found: {file_path}")
         return None
-    except pd.errors.EmptyDataError:
-        logger.error(f"No data in file: {file_path}")
+    except pd.errors.ParserError:
+        logger.error(f"Invalid CSV format in {file_path}")
         return None
     except Exception as e:
-        logger.error(f"Error loading data from {file_path}: {e}")
+        logger.error(f"Unexpected error loading {file_path}: {e}")
         return None
 
 
-def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Perform basic preprocessing: handle missing values and convert data types.
+def preprocess_data(df):
+    """Preprocess and transform NFL passing data."""
+    if df.empty:
+        logger.error("Input DataFrame is empty.")
+        return None
 
-    Args:
-        df (pd.DataFrame): Input DataFrame to preprocess.
+    df = df.dropna(subset=["Player"])
+    if df.empty:
+        logger.error("No rows remain after dropping missing Players.")
+        return None
+    logger.debug("Dropped rows with missing Player names.")
 
-    Returns:
-        pd.DataFrame: Preprocessed DataFrame.
-    """
-    # Handle missing 'Player' column gracefully
-    if "Player" in df.columns:
-        df = df.dropna(subset=["Player"])
-    else:
-        logger.warning("Warning: 'Player' column not found in data.")
+    rename_map = {
+        "Yds": "Pass Yds",
+        "TD": "Pass TD",
+        "Int": "Pass Int",
+        "Cmp": "Pass Cmp",
+        "Att": "Pass Att",
+        "Cmp%": "Pass Cmp%",
+        "Y/A": "Pass Y/A",
+        "AY/A": "Pass AY/A",
+        "Y/C": "Pass Y/C",
+        "Y/G": "Pass Y/G",
+        "Rate": "Pass Rate",
+        "Sk": "Pass Sk",
+        "Sk%": "Pass Sk%",
+        "NY/A": "Pass NY/A",
+        "ANY/A": "Pass ANY/A",
+    }
+    df = df.rename(columns=rename_map)
+    logger.debug(
+        f"Renamed columns: {list(rename_map.keys())} to {list(rename_map.values())}"
+    )
 
-    # Convert specified columns to numeric, checking existence
-    numeric_cols = ["Pass Yds", "TD"]  # Adjust based on Pro Football Reference CSV
+    numeric_cols = list(rename_map.values())
     for col in numeric_cols:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce")
+            logger.debug(f"Converted {col} to numeric.")
         else:
-            logger.warning(f"Warning: Column '{col}' not found in data.")
+            logger.warning(f"Column '{col}' not found in data.")
 
-    logger.info("Data preprocessed successfully.")
+    if "Pass Yds" in df.columns and "G" in df.columns:
+        df["Calc Pass Y/G"] = df["Pass Yds"] / df["G"]
+        logger.info("Added calculated column: 'Calc Pass Y/G'")
+    else:
+        logger.warning(
+            "Could not calculate 'Calc Pass Y/G' due to missing 'Pass Yds' or 'G'."
+        )
+
+    logger.info("Data preprocessed and transformed successfully.")
     return df
 
 
-def main() -> None:
-    """
-    Main function to ingest NFL data from a CSV, preprocess it, and save the result.
-
-    Command-line arguments:
-        --data-file: Path to the input CSV file (default: data/sample.csv).
-        --output: Path to save the cleaned CSV (default: data/cleaned_nfl_stats.csv).
-    """
-    parser = argparse.ArgumentParser(description="Ingest NFL data from a CSV.")
-    parser.add_argument(
-        "--data-file",
-        type=Path,
-        default=Path("data/sample.csv"),
-        help="Path to the CSV file",
+def main():
+    parser = argparse.ArgumentParser(
+        description="Ingest and transform NFL passing data from a CSV."
     )
     parser.add_argument(
-        "--output",
-        type=Path,
-        default=Path("data/cleaned_nfl_stats.csv"),
-        help="Output path for cleaned data",
+        "--data-file", default="data/sample.csv", help="Path to the CSV file"
+    )
+    parser.add_argument(
+        "--output", default="data/cleaned_nfl_stats.csv", help="Output path"
+    )
+    parser.add_argument(
+        "--verbose", action="store_true", help="Enable verbose (DEBUG) logging"
     )
     args = parser.parse_args()
 
-    # Set logging level
-    logging.basicConfig(level=logging.INFO)
+    if args.verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
 
-    # Load and process data
     raw_data = load_data(args.data_file)
-    if raw_data is not None:
-        clean_data = preprocess_data(raw_data)
-        clean_data.to_csv(args.output, index=False)
-        logger.info(f"Cleaned data saved to {args.output}")
+    if raw_data is None:
+        return
+
+    clean_data = preprocess_data(raw_data)
+    if clean_data is not None:
+        try:
+            clean_data.to_csv(args.output, index=False)
+            logger.info(f"Cleaned and transformed data saved to {args.output}")
+        except Exception as e:
+            logger.error(f"Failed to write output to {args.output}: {e}")
     else:
-        logger.error("Failed to load data. Please check the file path.")
+        logger.error("Preprocessing failed; no output saved.")
 
 
 if __name__ == "__main__":
