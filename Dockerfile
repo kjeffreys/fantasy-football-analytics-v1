@@ -10,5 +10,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy source code
 COPY src/ ./src/
 
-# Default command with verbose logging
-CMD ["python", "src/data_ingest.py", "--data-file", "/app/data/passing_stats_2022.csv", "--output", "/app/data/cleaned_passing_2022.csv", "--verbose"]
+# CMD removed, will be specified in docker-compose.yml or at runtime

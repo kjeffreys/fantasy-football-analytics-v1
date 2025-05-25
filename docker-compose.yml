@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: etl_app
+    volumes:
+      - ./src:/app/src  # Mount the src directory
+    # environment:
+      # Example:
+      # - DB_HOST=db
+      # - DB_PORT=5432
+      # - DB_NAME=nfl_data
+      # - DB_USER=nfl_user
+      # - DB_PASSWORD=nfl_password
+    depends_on:
+      - db
+    # command: ["python", "src/main_pipeline.py"] # Or leave blank to specify at runtime
+
+  db:
+    image: postgres:13
+    container_name: postgres_db
+    environment:
+      POSTGRES_USER: nfl_user
+      POSTGRES_PASSWORD: nfl_password
+      POSTGRES_DB: nfl_data
+    ports:
+      - "5432:5432" # Expose port for local connection if needed
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data: # Defines the persistent volume for PostgreSQL data

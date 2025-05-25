@@ -1,0 +1,78 @@
+name: Python ETL CI Pipeline
+
+on:
+  push:
+    branches: [ main, master, develop ] # Adjust branches as needed
+  pull_request:
+    branches: [ main, master, develop ]
+
+jobs:
+  test-etl-pipeline:
+    runs-on: ubuntu-latest
+    services:
+      # Optional: define services directly here if not using docker-compose up for db
+      # postgres:
+      #   image: postgres:13
+      #   env:
+      #     POSTGRES_USER: nfl_user
+      #     POSTGRES_PASSWORD: nfl_password
+      #     POSTGRES_DB: nfl_data
+      #   ports: # Optional: map to host if you need to debug connection from host
+      #     - 5432:5432
+      #   options: >-
+      #     --health-cmd pg_isready
+      #     --health-interval 10s
+      #     --health-timeout 5s
+      #     --health-retries 5
+      pass
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    # It's good practice to login to Docker Hub if pulling private images or to avoid rate limits,
+    # but not strictly necessary for public images like python:3.10-slim and postgres:13.
+    # - name: Log in to Docker Hub
+    #   uses: docker/login-action@v3
+    #   with:
+    #     username: ${{ secrets.DOCKER_USERNAME }}
+    #     password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Build services
+      run: docker-compose -f docker-compose.yml build app # Only app needs building
+
+    - name: Start database service
+      run: docker-compose -f docker-compose.yml up -d db
+
+    # Optional: Add a small delay or a more robust health check for the DB if tests are flaky
+    - name: Wait for DB to be ready
+      run: |
+        echo "Waiting for PostgreSQL to be ready..."
+        # This uses the pg_isready utility available in the PostgreSQL client tools
+        # If your app container doesn't have psql, this check needs to be different
+        # or you rely on the retry mechanism in test_etl_pipeline.py
+        # For now, the test script has its own retry loop.
+        # A simple sleep is less robust but can work for simple cases.
+        sleep 15 
+
+    - name: Run Integration Tests
+      run: |
+        docker-compose -f docker-compose.yml run \
+          -e DB_HOST=db \
+          -e DB_PORT=5432 \
+          -e DB_USER=nfl_user \
+          -e DB_PASSWORD=nfl_password \
+          -e DB_NAME=nfl_data \
+          -e PYTHONUNBUFFERED=1 \
+          --rm app \
+          pytest -v tests/test_etl_pipeline.py
+      # The --rm flag removes the container after the tests complete.
+      # PYTHONUNBUFFERED=1 ensures test output is shown in real-time.
+      # DB_HOST=db is crucial: tests inside 'app' container connect to 'db' service name.
+
+    - name: Stop services
+      if: always() # Ensure services are stopped even if tests fail
+      run: docker-compose -f docker-compose.yml down -v
