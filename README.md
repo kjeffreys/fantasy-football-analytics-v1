@@ -57,8 +57,8 @@ This repository contains scripts, configuration files, and other resources to:
 - **Language**: Python (3.10+)  
 - **Data & ML**: `pandas`, `numpy`, `scikit-learn` (initially)  
 - **DevOps**: Docker, GitHub Actions (CI), (future) AWS/Terraform  
-- **Database**: Local CSV/SQLite for now (optionally PostgreSQL with Docker Compose)  
-- **Container Orchestration**: Docker Compose or Kubernetes (later phases)
+- **Database**: Local CSV/SQLite for now (optionally PostgreSQL)  
+- **Container Orchestration**: Kubernetes (later phases)
 
 ---
 
@@ -66,18 +66,22 @@ This repository contains scripts, configuration files, and other resources to:
 
 ```
 fantasy-football-analytics/
+├── .github/
+│   └── workflows/
+│       └── python-app.yml   # GitHub Actions CI workflow for tests
+├── data/
+│   ├── sample_passing_data_raw.csv # Sample raw CSV data for ingestion
+│   └── sample_cleaned_data.csv   # Sample cleaned CSV data for analysis
 ├── src/
 │   ├── data_ingest.py       # Script for fetching/parsing raw NFL data
 │   ├── analysis.py          # Basic stats or ML analysis
-│   └── ... (other Python modules)
-├── data/                    # Sample data files (small CSVs, JSON, etc.)
-├── docker/                  # (Optional) Separate Dockerfiles or Compose configs
-├── tests/                   # Unit or integration tests
-├── .github/
-│   └── workflows/           # GitHub Actions CI/CD config files
+│   └── README.md            # Explains the purpose of each script in src
+├── tests/                   # Contains unit tests in tests/unit/ (see tests/README.md)
+│   ├── unit/                # Directory for unit tests
+│   └── README.md            # Explains test structure and execution
 ├── requirements.txt         # Python dependencies
+├── pyproject.toml           # Project configuration for build systems and tools
 ├── Dockerfile               # Base Dockerfile for the app
-├── docker-compose.yml       # (If using Docker Compose)
 └── README.md                # You are here
 ```
 
@@ -102,12 +106,23 @@ pip install -r requirements.txt
 
 ### 3. Run Scripts Locally
 
+The `data/` directory contains sample CSV files:
+- `sample_passing_data_raw.csv`: Use as input for `src/data_ingest.py`.
+- `sample_cleaned_data.csv`: Use as input for `src/analysis.py`.
+
+If you don't have the `data/` directory or these files, ensure they are created or downloaded. The scripts can be run as follows:
+
 ```bash
-python src/data_ingest.py
-python src/analysis.py
+# Ensure the data directory and sample files exist first.
+# If not, you might need to create data/ and populate it, e.g.:
+# mkdir data
+# (Then add sample_passing_data_raw.csv and sample_cleaned_data.csv to data/)
+
+python src/data_ingest.py --data-file data/sample_passing_data_raw.csv --output data/sample_cleaned_data.csv
+python src/analysis.py --data-file data/sample_cleaned_data.csv
 ```
 
-(Modify paths or file references in the code as needed.)
+(Modify paths or file references if using different data.)
 
 ---
 
@@ -127,21 +142,13 @@ docker run --rm fantasy-analytics:latest
 
 This should execute the default command (e.g., running `src/data_ingest.py` or a `main.py` that orchestrates everything).
 
-### 3. Docker Compose (Optional)
-
-If you have a `docker-compose.yml` with multiple services (e.g., a database + your app):
-
-```bash
-docker compose up
-```
-
 ---
 
 ## Roadmap
 
 ### Week 0: Initial Setup
 - Initialize repo, set up Python environment, add Dockerfile
-- Gather a small sample NFL dataset (CSV)
+- Sample NFL dataset (CSV) provided in `data/`.
 
 ### Week 1: Basic Ingestion & Containerization
 - Write `data_ingest.py` to parse CSV or API data
@@ -150,13 +157,13 @@ docker compose up
 
 ### Week 2: Analytics & CI
 - Add simple analysis in `analysis.py` (top players, summary stats)
-- Configure GitHub Actions to build/test the Docker image
-- Optionally create basic tests in `tests/`
+- Configure GitHub Actions to run unit tests.
+- Basic unit tests created in `tests/unit/`.
 
-### Week 3: ETL Pipeline & Docker Compose
+### Week 3: ETL Pipeline & Optional Database
 - Set up multi-step pipeline (extract, transform, load)
-- Introduce Docker Compose (optional DB container)
-- Improve CI to run integration tests
+- Optionally introduce a database container (e.g., PostgreSQL) for more robust data storage.
+- Improve CI to run integration tests (future)
 
 ### Week 4: Basic ML & Refactoring
 - Experiment with `scikit-learn` for simple player performance predictions
